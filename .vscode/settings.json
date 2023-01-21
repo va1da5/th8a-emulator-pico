@@ -82,6 +82,7 @@
         "crun",
         "Datasheet",
         "devcontainer",
+        "gamepad",
         "gpio",
         "openocd",
         "PICO",

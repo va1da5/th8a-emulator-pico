@@ -8,12 +8,16 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "gears.h"
+#include "bsp/board.h"
+#include "tusb.h"
+#include "tusb_config.h"
 
 using namespace std;
 
-static int g_addr = 0x01;
+static uint8_t g_addr = 0x01;
 
-Gear gear;
+extern void hid_app_task(void);
+void led_blinking_task(void);
 
 void send(i2c_inst_t *i2c, Gear &gear)
 {
@@ -31,12 +35,15 @@ int main()
 {
     // Enable UART so we can print status output
     stdio_init_all();
+
+    board_init();
+
 #if !defined(i2c_default) || !defined(PICO_DEFAULT_I2C_SDA_PIN) || !defined(PICO_DEFAULT_I2C_SCL_PIN)
 #warning i2c/bus_scan example requires a board with I2C pins
     puts("Default I2C pins were not defined");
 #else
 
-    // This example will use I2C0 on the default SDA and SCL pins (GP4, GP5 on a Pico)
+    // This example will use I2C0 on the default SDA and SCL pins(GP4, GP5 on a Pico)
     i2c_init(i2c_default, 100 * 1000);
     gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
@@ -45,39 +52,37 @@ int main()
 
     printf("\n<Reboot>\n");
 
+    tusb_init();
+
     while (true)
     {
+        // tinyusb host task
+        tuh_task();
 
-        gear.set_gear_mode(GearMode::S);
-        gear.set_gear_sequencial(GearSequencial::center);
-        printf("\nS -> Center\n");
-        send(i2c_default, gear);
+        led_blinking_task();
 
-        sleep_ms(500);
-
-        gear.set_gear_sequencial(GearSequencial::up);
-        printf("\nS -> Up\n");
-        send(i2c_default, gear);
-
-        sleep_ms(500);
-
-        gear.set_gear_sequencial(GearSequencial::down);
-        printf("\nS -> Down\n");
-        send(i2c_default, gear);
-
-        sleep_ms(500);
-        gear.set_gear_mode(GearMode::H);
-
-        for (uint8_t i = 0; i < 9; i++)
-        {
-            gear.set_gear_h(i);
-            printf("\nH -> %i\n", i);
-            send(i2c_default, gear);
-            sleep_ms(500);
-        }
-
-        printf("\n\n\n");
+#if CFG_TUH_HID
+        hid_app_task();
+#endif
     }
 
+    return 0;
+
 #endif
+}
+
+void led_blinking_task(void)
+{
+    const uint32_t interval_ms = 1000;
+    static uint32_t start_ms = 0;
+
+    static bool led_state = false;
+
+    // Blink every interval ms
+    if (board_millis() - start_ms < interval_ms)
+        return; // not enough time
+    start_ms += interval_ms;
+
+    board_led_write(led_state);
+    led_state = 1 - led_state; // toggle
 }

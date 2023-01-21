@@ -1,4 +1,5 @@
 #include <iostream>
+#include "hardware/i2c.h"
 
 enum GearSequencial : uint8_t
 {
@@ -44,4 +45,5 @@ public:
     unsigned char get_gear_sequencial();
     uint8_t *get_data();
     uint8_t get_size();
+    void send(i2c_inst_t *i2c, uint8_t addr);
 };

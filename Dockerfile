@@ -26,9 +26,12 @@ RUN git clone --branch rp2040 --recursive --depth=1  https://github.com/raspberr
 
 WORKDIR /pico
 
-RUN git clone https://github.com/raspberrypi/pico-sdk.git pico-sdk \
+RUN git clone --depth 1 --branch 1.4.0 https://github.com/raspberrypi/pico-sdk.git pico-sdk \
     && cd pico-sdk \
-    && git submodule update --init
+    && git submodule update --init \ 
+    && cd /libs \
+    && rm -rf tinyusb \
+    && git clone --depth 1 --branch 0.14.0 https://github.com/hathach/tinyusb.git
 
 RUN git clone https://github.com/raspberrypi/openocd.git openocd
 

@@ -55,11 +55,22 @@ unsigned char Gear::get_gear_sequencial()
 
 uint8_t *Gear::get_data()
 {
-
     return static_cast<uint8_t *>(this->m_data);
 }
 
 uint8_t Gear::get_size()
 {
     return this->m_size;
+}
+
+void Gear::send(i2c_inst_t *i2c, uint8_t addr)
+{
+    auto data = this->get_data();
+
+    for (int i = 0; i < 14; i++)
+    {
+        printf("%02X ", m_data[i]);
+    }
+
+    i2c_write_blocking(i2c, addr, data, m_size, true);
 }
