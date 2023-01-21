@@ -29,7 +29,7 @@ WORKDIR /pico
 RUN git clone --depth 1 --branch 1.4.0 https://github.com/raspberrypi/pico-sdk.git pico-sdk \
     && cd pico-sdk \
     && git submodule update --init \ 
-    && cd /libs \
+    && cd /lib \
     && rm -rf tinyusb \
     && git clone --depth 1 --branch 0.14.0 https://github.com/hathach/tinyusb.git
 
