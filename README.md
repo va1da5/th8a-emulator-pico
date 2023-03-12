@@ -1,10 +1,100 @@
-# Thrustmaster TH8A Emulator
+# Generic USB Shifter to Thrustmaster TH8A Emulator
 
-This repository contains continuation of work started in [the previous repository](https://github.com/va1da5/tm-th8a-emulator-research-stm32).
+
+### UDEV Rule
+
+Create udev rule for Pico UART device
+
+`cat > /etc/udev/rules.d/95-pico.rules`
+
+```
+# Raspberry Pi Pico
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000c", GROUP="dialout", MODE="0666", SYMLINK+="pico"
+
+```
+
+### Monitor UART
+
+```bash
+minicom -b 115200 -8 -D /dev/pico
+# or 
+minicom -b 115200 -8 -D /dev/ttyACM0
+```
+
+### Connection
+
+- VDD -> RED
+- VSS -> GND
+- I2C-SCL -> WHITE
+- I2C-SDA -> GREEN
+
+## Connection Diagram
+
+![connections](./images/connections.png)
+
+## Raspberry Pi Pico Pin-outs
+
+Original Raspberry Pi Pico
+
+![Original Raspberry Pi Pico](./images/Raspberry-Pi-Pico-Pinout.jpg)
+
+Pink Chinese Clone
+
+![Pink Chinese Clone](./images/pink-pico-pinout.png)
+
+
+## Flash Binaries
+
+```bash
+# build binary manually
+make build
+
+# flash binary directly using openocd
+make flash
+
+# build and flash
+make apply
+```
+
+
+## Picoprobe Wiring
+
+![wiring diagram](./images/picoprobe-conncetion.png)
+
+
+## USB Shifter Analysis
+
+```bash
+lsusb
+# ...
+# Bus 001 Device 033: ID 8587:5757 FreeJoy JACK-SQ
+# ...
+
+# Find out more details about specific USB device.
+lsusb -d 8587:5757 -v
+```
+
+Wireshark filter for USB Device 33 on Bus 1  `usb.src == "1.33.1" || usb.dst == "1.33.1"`. 
+
 
 ## Notes
 
-TSS Sparco handbrake I2C data
+Queue is being filled using interrupts. Later, pooling task reads from the queue and acts on it.
+
+IRQ calls [`static void __tusb_irq_path_func(hcd_rp2040_irq)(void)`](/pico/pico-sdk/lib/tinyusb/src/portable/raspberrypi/rp2040/hcd_rp2040.c) function.
+
+```c
+// USB controller memory location
+#define USBCTRL_REGS_BASE _u(0x50110000)
+
+```
+
+The USB shifter is missing a 1.5K pull-up resistor on DP (D+) line that would let MCU know its supported speed. 
+
+
+## Notes
+
+TSS Sparco handbrake I2C data [@forum](https://www.isrtv.com/forums/topic/24532-gearbox-connector-on-base/?do=findComment&comment=232234)
 
 ```
 02 0C 02 00 FF 80 81 80 81 00 00 00 00 00
@@ -21,6 +111,8 @@ TSS Sparco handbrake I2C data
 > Above TSS handbrake's I2C data mean about 0-100% brake force. Of course you need to send out every row maybe 100 times. Because of 250ms. Elsewhere you won't see anything.
 
 ```
+Handbreak min -> max
+
 0  02 02 02 02 02 // TSS handbrake
 1  0C 0C 0C 0C 0C // Unknown
 2  02 02 02 02 02 // ?? Device ID
@@ -36,64 +128,6 @@ B  00 00 00 00 00 // Unknown
 C  00 00 00 00 00 // Unknown
 D  00 00 00 00 00 // Unknown
 ```
-
-### UDEV Rule
-
-Create udev rule for Pico UART device
-
-`cat > /etc/udev/rules.d/95-pico.rules`
-
-```
-# Raspberry Pi Pico
-SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", GROUP="dialout", MODE="0666", SYMLINK+="pico"
-
-```
-
-### Monitor UART
-
-```bash
-tinygo monitor -port /dev/pico # /dev/ttyACM0
-
-minicom -b 115200 -8 -D /dev/pico
-```
-
-### Connection
-
-- VDD -> RED
-- VSS -> GND
-- I2C-SCL -> WHITE
-- I2C-SDA -> GREEN
-
-## Connection Diagram
-
-TODO
-
-## Raspberry Pi Pico Pin Diagram
-
-![pinout](./images/Raspberry-Pi-Pico-Pinout.jpg)
-
-## Flash Binaries
-
-```bash
-# build binary manually
-make build
-
-# flash binary directly using openocd
-make flash
-```
-
-## Linting
-
-There is an option to enable C++ code linting functionality using [Clang-tidy](https://clang.llvm.org/extra/clang-tidy/). Install the linter using the commands below.
-
-```bash
-apt update && apt install clang-tidy
-
-```
-
-## Picoprobe Wiring
-
-![wiring diagram](./images/picoprobe-conncetion.png)
 
 ## References
 
@@ -111,3 +145,10 @@ apt update && apt install clang-tidy
 - [Awesome Arduino](https://github.com/Lembed/Awesome-arduino)
 - [RPi Pico I2C Address Limitation](https://raspberrypi.github.io/pico-sdk-doxygen/group__hardware__i2c.html#i2c_example)
 - [GoLang Compiler Directives](https://pkg.go.dev/cmd/compile#hdr-Compiler_Directives)
+- [[RP2040] First byte of X52 Pro HID report is zero, unless CFG_TUSB_DEBUG >= 2](https://github.com/hathach/tinyusb/issues/1883)
+- [capturing usb on linux with wireshark](https://www.youtube.com/watch?app=desktop&v=bhZqA1By314)
+- [picoprobe-cmsis-v1.0.1](https://github.com/raspberrypi/picoprobe/releases/tag/picoprobe-cmsis-v1.0.1)
+- [LearnEmbeddedSystems/rp2040-project-template](https://github.com/LearnEmbeddedSystems/rp2040-project-template/tree/5f169a12eb940ed6a86003672052db57d2a82abc)
+- [USB in a NutShell](https://www.beyondlogic.org/usbnutshell/usb2.shtml)
+- [STM32 CLONES: THE GOOD, THE BAD AND THE UGLY](https://hackaday.com/2020/10/22/stm32-clones-the-good-the-bad-and-the-ugly/)
+- [STM32F103 USB circuit](https://community.st.com/s/question/0D50X00009XkY1uSAF/stm32f103-usb-circuit)

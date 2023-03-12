@@ -27,7 +27,13 @@
 #include "tusb.h"
 #include "gears.h"
 
-Gear gear;
+extern Gear gear;
+
+/// HID USB H-Shifter Protocol Report.
+typedef struct TU_ATTR_PACKED
+{
+    uint8_t x; ///< Delta x  movement of left analog-stick
+} hid_shifter_report_t;
 
 //--------------------------------------------------------------------+
 // MACRO TYPEDEF CONSTANT ENUM DECLARATION
@@ -102,6 +108,8 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 {
     uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, instance);
 
+    // printf("Device Address 0x%x\r\n", dev_addr);
+
     switch (itf_protocol)
     {
     case HID_ITF_PROTOCOL_KEYBOARD:
@@ -169,79 +177,39 @@ static void process_kbd_report(hid_keyboard_report_t const *report)
     prev_report = *report;
 }
 
-enum Values : uint32_t
-{
-    Min = 0x0,
-    Middle = 0x7f,
-    Max = 0xffffffff,
-};
-
 //--------------------------------------------------------------------+
 // Joystick
 //--------------------------------------------------------------------+
-static void process_joystick_report(hid_gamepad_report_t const *report)
+static void process_joystick_report(hid_shifter_report_t const *report)
 {
-    static hid_gamepad_report_t prev_report = {0, 0, 0, 0, 0, 0, 0, 0}; // previous report to check key released
+    static hid_shifter_report_t prev_report = {0}; // previous report to check key released
 
-    // printf("[lx:%x, ly:%x],[rx:%x, ry:%x], [hat:%x], [buttons:%x] \r\n",
-    //        report->x, report->y,
-    //        report->rx, report->ry,
-    //        report->hat,
-    //        report->buttons);
+    // printf("[lx:%x, ly:%x]\r\n", report->x, report->y);
+    if (prev_report.x == report->x)
+        return;
 
-    if (prev_report.x != report->x)
+    switch (gear.get_mode())
     {
-        printf("LX=0x%x\n", report->x);
+    case 'H':
+        gear.set_gear_h(report->x, true);
+        break;
 
-        switch ((uint32_t)report->x)
+    case 'S':
+        switch (report->x)
         {
-        case Values::Min:
-            printf("Left\n");
-            break;
-
-        case Values::Middle:
-            printf("Center\n");
-            break;
-
-        case Values::Max:
-            printf("Right\n");
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    if (prev_report.y != report->y)
-    {
-        printf("LY=0x%x\n", report->y);
-
-        gear.set_gear_mode(GearMode::S);
-
-        switch ((uint32_t)report->y)
-        {
-        case Values::Min:
-            printf("Up\n");
+        case 1 << 2:
             gear.set_gear_sequencial(GearSequencial::up);
-            gear.send(i2c_default, 0x01);
             break;
-
-        case Values::Middle:
-            printf("Center\n");
-            gear.set_gear_sequencial(GearSequencial::center);
-            gear.send(i2c_default, 0x01);
-            break;
-
-        case Values::Max:
-            printf("Down\n");
+        case 1 << 3:
             gear.set_gear_sequencial(GearSequencial::down);
-            gear.send(i2c_default, 0x01);
             break;
-
         default:
-            break;
+            gear.set_gear_sequencial(GearSequencial::center);
         }
+
+        break;
     }
+    gear.send(i2c_default);
 
     prev_report = *report;
 }
@@ -306,8 +274,8 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
             break;
 
         case HID_USAGE_DESKTOP_JOYSTICK:
-            // TU_LOG1("HID receive joystick report\r\n");
-            process_joystick_report((hid_gamepad_report_t const *)report);
+            TU_LOG1("HID receive shifter report\r\n");
+            process_joystick_report((hid_shifter_report_t const *)report);
             break;
 
         default:

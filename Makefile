@@ -12,10 +12,16 @@ build:
 
 .PHONY: reset
 reset:
-	openocd -f interface/picoprobe.cfg -f target/rp2040.cfg -c "init; reset; exit"
+	openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000" -c "init; reset; exit"
 
 .PHONY: flash
-flash: reset
+flash:
 	cd ./build; \
-	openocd -f interface/picoprobe.cfg -f target/rp2040.cfg -c "program $(BINARY).elf verify reset exit"
+	openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000" -c "program $(BINARY).elf verify reset exit"
 
+.PHONY: apply
+apply: build reset flash
+
+.PHONY: clean
+clean:
+	rm -rf build
