@@ -48,7 +48,8 @@
         "streambuf": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "istream": "cpp"
+        "istream": "cpp",
+        "rp2040_usb.h": "c"
     },
     // These settings tweaks to the cmake plugin will ensure
     // that you debug using cortex-debug instead of trying to launch
@@ -82,10 +83,12 @@
         "crun",
         "Datasheet",
         "devcontainer",
+        "gamepad",
         "gpio",
         "openocd",
         "PICO",
         "Picoprobe",
         "Udev"
-    ]
+    ],
+    "cortex-debug.variableUseNaturalFormat": true
 }

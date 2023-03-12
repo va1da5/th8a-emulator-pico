@@ -10,8 +10,14 @@ void Gear::set_gear_sequencial(GearSequencial gear)
     this->m_data[4] = gear;
 }
 
-void Gear::set_gear_h(uint8_t gear)
+void Gear::set_gear_h(uint8_t gear, bool direct = false)
 {
+    if (direct)
+    {
+        this->m_data[3] = gear;
+        return;
+    }
+    // Sets gear in human terms (0-8)
     this->m_data[3] = (0x80 >> (8 - gear));
 }
 
@@ -55,11 +61,27 @@ unsigned char Gear::get_gear_sequencial()
 
 uint8_t *Gear::get_data()
 {
-
     return static_cast<uint8_t *>(this->m_data);
 }
 
 uint8_t Gear::get_size()
 {
     return this->m_size;
+}
+
+void Gear::send(i2c_inst_t *i2c)
+{
+    this->send(i2c, this->m_addr);
+}
+
+void Gear::send(i2c_inst_t *i2c, uint8_t addr)
+{
+    auto data = this->get_data();
+
+    // for (int i = 0; i < 14; i++)
+    // {
+    //     printf("%02X ", m_data[i]);
+    // }
+
+    i2c_write_blocking(i2c, addr, data, this->m_size, false);
 }

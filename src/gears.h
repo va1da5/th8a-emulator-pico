@@ -1,4 +1,7 @@
+#pragma once
+
 #include <iostream>
+#include "hardware/i2c.h"
 
 enum GearSequencial : uint8_t
 {
@@ -18,6 +21,7 @@ class Gear
 
 private:
     uint8_t m_size = 14;
+    uint8_t m_addr = 0x01;
     uint8_t m_data[14] = {
         0x00, // Shifter mode 0 - S / 0x80 - H
         0x0C, // Unknown
@@ -38,10 +42,12 @@ private:
 public:
     void set_gear_mode(GearMode mode);
     void set_gear_sequencial(GearSequencial gear);
-    void set_gear_h(uint8_t gear);
+    void set_gear_h(uint8_t gear, bool direct);
     unsigned char get_mode();
     uint8_t get_gear_h();
     unsigned char get_gear_sequencial();
     uint8_t *get_data();
     uint8_t get_size();
+    void send(i2c_inst_t *i2c);
+    void send(i2c_inst_t *i2c, uint8_t addr);
 };
